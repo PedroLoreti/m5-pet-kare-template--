@@ -38,11 +38,52 @@ class PetView(APIView, PageNumberPagination):
 
         return Response(serializer.data, status=201)
 
-    def get(self, request: Request) -> Response:
-        pets = Pet.objects.all()
+    def get(self, request: Request, pet_id: int = None) -> Response:
+
+        if pet_id:
+            try:
+                pet = Pet.objects.get(id=pet_id)
+            except Pet.DoesNotExist:
+                return Response({"detail": "Not found."}, status=404)
+
+            serializer = PetSerializer(pet)
+
+            return Response(serializer.data, status=200)
+
+        trait = request.query_params.get('trait')
+
+        if trait:
+            pets = Pet.objects.filter(traits__name__iexact=trait)
+        else:
+            pets = Pet.objects.all()
 
         result_page = self.paginate_queryset(pets, request, view=self)
 
         serializer = PetSerializer(result_page, many=True)
 
         return self.get_paginated_response(serializer.data)
+
+    def delete(self, request: Request, pet_id: int) -> Response:
+        try:
+            pet = Pet.objects.get(id=pet_id)
+        except Pet.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        pet.delete()
+
+        return Response(status=204)
+
+    def patch(self, request: Request, pet_id: int) -> Response:
+        try:
+            pet = Pet.objects.get(id=pet_id)
+        except Pet.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        serializer = PetSerializer(pet, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        serializer.update(pet, serializer.validated_data)
+
+        return Response(serializer.data, status=200)

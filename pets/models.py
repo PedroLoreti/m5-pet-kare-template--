@@ -16,7 +16,7 @@ class Pet(models.Model):
     group = models.ForeignKey(
         "groups.Group",
         on_delete=models.PROTECT,
-        related_name="group",
+        related_name="pets",
         null=True,
     )
 
